@@ -136,7 +136,7 @@ class COCODemo(object):
         masks_per_dim=2,
         min_image_size=224,
         weight_loading = None
-    ):
+        ):
         self.cfg = cfg.clone()
         self.model = build_detection_model(cfg)
         self.model.eval()
@@ -208,7 +208,7 @@ class COCODemo(object):
         """
         predictions = self.compute_prediction(image)
         top_predictions = self.select_top_predictions(predictions)
-
+     
         result = image.copy()
         if self.show_mask_heatmaps:
             return self.create_mask_montage(result, top_predictions)
@@ -233,15 +233,16 @@ class COCODemo(object):
         """
         # apply pre-processing to image
         image = self.transforms(original_image)
+        
         # convert to an ImageList, padded so that it is divisible by
         # cfg.DATALOADER.SIZE_DIVISIBILITY
         image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
         image_list = image_list.to(self.device)
+        
         # compute predictions
         with torch.no_grad():
             predictions = self.model(image_list)
         predictions = [o.to(self.cpu_device) for o in predictions]
-
         # always single image is passed at a time
         prediction = predictions[0]
 
@@ -272,9 +273,16 @@ class COCODemo(object):
                 of the detection properties can be found in the fields of
                 the BoxList via `prediction.fields()`
         """
+        # Remove not in our interest labels
+        labels = predictions.extra_fields['labels']
+        labels_interest = ((labels == 1) | (labels == 2) | (labels == 3))
+        keep = torch.nonzero(labels_interest != 0).squeeze(1)
+        predictions = predictions[keep]
+
         scores = predictions.get_field("scores")
         keep = torch.nonzero(scores > self.confidence_threshold).squeeze(1)
         predictions = predictions[keep]
+
         scores = predictions.get_field("scores")
         _, idx = scores.sort(0, descending=True)
         return predictions[idx]
@@ -469,3 +477,39 @@ def vis_keypoints(img, kps, kp_thresh=2, alpha=0.7):
 
     # Blend the keypoints.
     return cv2.addWeighted(img, 1.0 - alpha, kp_mask, alpha, 0)
+
+
+import matplotlib.pyplot as plt
+import matplotlib.pylab as pylab
+import requests
+from io import BytesIO
+from PIL import Image
+import numpy as np
+# this makes our figures bigger
+pylab.rcParams['figure.figsize'] = 20, 12
+from maskrcnn_benchmark.config import cfg
+
+
+def imshow(img):
+    plt.imshow(img[:, :, [2, 1, 0]])
+    plt.axis("off")
+
+
+if __name__ == '__main__':
+    config_file = "../configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml"
+
+    # update the config options with the config file
+    cfg.merge_from_file(config_file)
+    # manual override some options
+    cfg.merge_from_list(["MODEL.DEVICE", "cpu"])
+
+    # COCOdemo object
+    coco_demo = COCODemo(
+        cfg,
+        min_image_size=720,
+        confidence_threshold=0.7,
+    )
+    # Read images
+    image_1 = cv2.imread('frame_10.jpg')
+    predictions = coco_demo.run_on_opencv_image(image_1)
+    imshow(predictions)

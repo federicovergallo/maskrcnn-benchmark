@@ -70,6 +70,7 @@ def convert_abstract_to_coco(dataset, num_workers=None, chunksize=100):
         % (dataset_name, num_images, num_workers, chunksize)
     )
 
+    num_workers = 1
     with torch.multiprocessing.Pool(num_workers) as pool:
         with tqdm(total=num_images) as progress_bar:
             args = [(dataset, idx) for idx in range(num_images)]

@@ -7,6 +7,16 @@ from copy import deepcopy
 class DatasetCatalog(object):
     DATA_DIR = "datasets"
     DATASETS = {
+        "SYNTHIA_TRAIN_SET": {
+            "img_dir": "/mnt/Data/synthia_dataset",
+            "ann_file": "/mnt/Data/synthia_dataset/output_json/train.json"
+        },
+
+        "SYNTHIA_TEST_SET": {
+            "img_dir": "/mnt/Data/synthia_dataset",
+            "ann_file": "/mnt/Data/synthia_dataset/output_json/test.json"
+        },
+    
         "coco_2017_train": {
             "img_dir": "coco/train2017",
             "ann_file": "coco/annotations/instances_train2017.json"
@@ -85,7 +95,7 @@ class DatasetCatalog(object):
         },
         "voc_2012_val_cocostyle": {
             "img_dir": "voc/VOC2012/JPEGImages",
-            "ann_file": "voc/VOC2012/Annotations/pascal_val2012.json"
+            "ann_file": "datasets/auto_vos/annotations/vid1.json"
         },
         "voc_2012_test": {
             "data_dir": "voc/VOC2012",
@@ -179,6 +189,12 @@ class DatasetCatalog(object):
             attrs["img_dir"] = os.path.join(data_dir, attrs["img_dir"])
             attrs["ann_dir"] = os.path.join(data_dir, attrs["ann_dir"])
             return dict(factory="CityScapesDataset", args=attrs)
+
+        elif "synthia" in name.lower():
+            attrs = DatasetCatalog.DATASETS[name]
+            args = dict(annt_file=attrs["ann_file"],
+                        img_dir=attrs["img_dir"])
+            return dict(factory="SYNTHIADataset", args=args,)
         raise RuntimeError("Dataset not available: {}".format(name))
 
 

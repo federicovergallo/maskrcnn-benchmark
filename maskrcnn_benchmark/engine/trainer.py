@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.utils.comm import get_world_size, synchronize
-from maskrcnn_benchmark.utils.metric_logger import MetricLogger
+#from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 from maskrcnn_benchmark.engine.inference import inference
 
 from apex import amp
@@ -52,10 +52,11 @@ def do_train(
     checkpoint_period,
     test_period,
     arguments,
+    meters
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
-    meters = MetricLogger(delimiter="  ")
+    #meters = MetricLogger(delimiter="  ")
     max_iter = len(data_loader)
     start_iter = arguments["iteration"]
     model.train()
@@ -77,6 +78,8 @@ def do_train(
         data_time = time.time() - end
         iteration = iteration + 1
         arguments["iteration"] = iteration
+        
+        torch.cuda.empty_cache()
 
         images = images.to(device)
         targets = [target.to(device) for target in targets]
@@ -97,6 +100,11 @@ def do_train(
             scaled_losses.backward()
         optimizer.step()
         scheduler.step()
+        
+        # Freeing some cuda memory
+        del images
+        del targets
+
 
         batch_time = time.time() - end
         end = time.time()

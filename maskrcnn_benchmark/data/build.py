@@ -84,7 +84,7 @@ def _compute_aspect_ratios(dataset):
 
 
 def make_batch_data_sampler(
-    dataset, sampler, aspect_grouping, images_per_batch, num_iters=None, start_iter=0
+        dataset, sampler, aspect_grouping, images_per_batch, num_iters=None, start_iter=0
 ):
     if aspect_grouping:
         if not isinstance(aspect_grouping, (list, tuple)):
@@ -110,7 +110,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
     if is_train:
         images_per_batch = cfg.SOLVER.IMS_PER_BATCH
         assert (
-            images_per_batch % num_gpus == 0
+                images_per_batch % num_gpus == 0
         ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
             images_per_batch, num_gpus)
         images_per_gpu = images_per_batch // num_gpus
@@ -119,7 +119,7 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
     else:
         images_per_batch = cfg.TEST.IMS_PER_BATCH
         assert (
-            images_per_batch % num_gpus == 0
+                images_per_batch % num_gpus == 0
         ), "TEST.IMS_PER_BATCH ({}) must be divisible by the number of GPUs ({}) used.".format(
             images_per_batch, num_gpus)
         images_per_gpu = images_per_batch // num_gpus
@@ -153,7 +153,11 @@ def make_data_loader(cfg, is_train=True, is_distributed=False, start_iter=0, is_
 
     # If bbox aug is enabled in testing, simply set transforms to None and we will apply transforms later
     transforms = None if not is_train and cfg.TEST.BBOX_AUG.ENABLED else build_transforms(cfg, is_train)
-    datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train or is_for_period)
+    print(dataset_list)
+    try:
+        datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train or is_for_period)
+    except Exception as e:
+        datasets = build_dataset([dataset_list], transforms, DatasetCatalog, is_train or is_for_period)
 
     if is_train:
         # save category_id to label name mapping

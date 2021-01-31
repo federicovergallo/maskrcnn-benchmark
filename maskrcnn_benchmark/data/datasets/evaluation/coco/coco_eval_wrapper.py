@@ -22,6 +22,7 @@ def do_coco_evaluation(
 
     logger = logging.getLogger("maskrcnn_benchmark.inference")
     logger.info("Converting annotations to COCO format...")
+
     coco_annotation_dict = convert_abstract_to_coco(dataset)
 
     dataset_name = dataset.__class__.__name__
@@ -32,7 +33,7 @@ def do_coco_evaluation(
 
     logger.info("Loading annotations as COCODataset")
     coco_dataset = COCODataset(
-        ann_file=coco_annotation_path,
+        ann_file=dataset.annotation_file,
         root="",
         remove_images_without_annotations=False,
         transforms=None,  # transformations should be already saved to the json

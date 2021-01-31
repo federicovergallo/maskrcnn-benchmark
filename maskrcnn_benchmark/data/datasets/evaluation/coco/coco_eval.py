@@ -9,6 +9,9 @@ from maskrcnn_benchmark.modeling.roi_heads.mask_head.inference import Masker
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 
+import numpy as np
+import pycocotools.mask as mask_util
+
 
 def do_coco_evaluation(
     dataset,
@@ -80,7 +83,7 @@ def prepare_for_coco_detection(predictions, dataset):
         image_height = img_info["height"]
         prediction = prediction.resize((image_width, image_height))
         prediction = prediction.convert("xywh")
-
+        
         boxes = prediction.bbox.tolist()
         scores = prediction.get_field("scores").tolist()
         labels = prediction.get_field("labels").tolist()
@@ -130,10 +133,10 @@ def prepare_for_coco_segmentation(predictions, dataset):
         scores = prediction.get_field("scores").tolist()
         labels = prediction.get_field("labels").tolist()
 
-        # rles = prediction.get_field('mask')
+        #rles = prediction.get_field('mask')
 
         rles = [
-            mask_util.encode(np.array(mask[0, :, :, np.newaxis], order="F"))[0]
+            mask_util.encode(np.array(mask[0, :, :, np.newaxis], dtype=np.uint8, order="F"))[0]
             for mask in masks
         ]
         for rle in rles:
@@ -302,13 +305,31 @@ def evaluate_box_proposals(
     }
 
 
+def masks_to_rles(masks_tensor):
+    # TODO: parallelize
+    rles = []
+    for instance_mask in masks_tensor:
+        np_mask = np.array(instance_mask[:, :, None], order="F")
+        rle = mask_util.encode(np_mask)[0]
+        rle["counts"] = rle["counts"].decode("utf-8")
+        rles.append(rle)
+
+    return rles
+
+
 def evaluate_predictions_on_coco(
     coco_gt, coco_results, json_result_file, iou_type="bbox"
 ):
     import json
-
-    with open(json_result_file, "w") as f:
-        json.dump(coco_results, f)
+    try:
+        with open(json_result_file, "w") as f:
+            json.dump(coco_results, f)
+    except TypeError as e:
+        print(e)
+        for i in range(len(coco_results)):
+            coco_results[i]['category_id'] = int(coco_results[i]['category_id'])
+        with open(json_result_file, "w") as f:
+            json.dump(coco_results, f)
 
     from pycocotools.coco import COCO
     from pycocotools.cocoeval import COCOeval
